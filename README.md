@@ -41,6 +41,25 @@ Default admin credentials are seeded from `.env`:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 
+## Deploy On Render
+
+This repository includes a Render blueprint file:
+- `render.yaml`
+
+Steps:
+1. Open Render Dashboard -> New -> Blueprint.
+2. Connect GitHub repo: `alfarhaanrathodstudy656-debug/smart-exam-backend`.
+3. Render will detect `render.yaml`.
+4. Set required secret env vars in Render before first deploy:
+   - `MONGO_URI`
+   - `JWT_SECRET`
+   - `ADMIN_PASSWORD`
+   - `CLIENT_URL`
+   - `GOOGLE_CLIENT_ID` (if Google Sign-In is enabled)
+   - `OPENAI_API_KEY` (if AI features are enabled)
+5. Deploy and verify:
+   - `GET /api/health`
+
 ## Environment Variables
 
 ### Core
