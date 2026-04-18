@@ -22,7 +22,7 @@ const env = {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean),
-  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '205884473037-ciuuknvt17crqrd8out077ta2u8qek5o.apps.googleusercontent.com',
   googleAdminAllowlist: (process.env.GOOGLE_ADMIN_ALLOWLIST || '')
     .split(',')
     .map((item) => item.trim().toLowerCase())
