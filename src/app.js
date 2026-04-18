@@ -31,7 +31,7 @@ app.use(cors({
       return;
     }
 
-    if (origin === env.clientUrl) {
+    if (env.clientUrls.includes(origin)) {
       callback(null, true);
       return;
     }

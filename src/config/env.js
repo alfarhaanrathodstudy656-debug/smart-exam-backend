@@ -15,10 +15,13 @@ const env = {
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  adminEmail: process.env.ADMIN_EMAIL || 'admin@example.com',
+  adminEmail: process.env.ADMIN_EMAIL || 'alfarhaanrathodstudy656@gmail.com',
   adminPassword: process.env.ADMIN_PASSWORD || 'Admin@123',
   defaultNegativeMarkRatio: Number(process.env.DEFAULT_NEGATIVE_MARK_RATIO || 0.25),
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrls: (process.env.CLIENT_URLS || process.env.CLIENT_URL || 'https://smart-exam-system-umber.vercel.app')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean),
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleAdminAllowlist: (process.env.GOOGLE_ADMIN_ALLOWLIST || '')
     .split(',')
@@ -41,6 +44,8 @@ const env = {
     from: process.env.SMTP_FROM || 'Smart Exam <no-reply@smart-exam.local>'
   }
 };
+
+env.clientUrl = env.clientUrls[0] || 'https://smart-exam-system-umber.vercel.app';
 
 module.exports = env;
 

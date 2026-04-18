@@ -24,6 +24,8 @@ services:
         value: "0.25"
       - key: CLIENT_URL
         sync: false
+      - key: CLIENT_URLS
+        value: https://smart-exam-system-umber.vercel.app
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_ADMIN_ALLOWLIST
