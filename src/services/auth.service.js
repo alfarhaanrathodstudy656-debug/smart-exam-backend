@@ -196,6 +196,13 @@ const requestAdminLoginSecurityKey = async ({ email }) => {
   const normalizedEmail = email.toLowerCase();
   assertPrimaryAdminEmail(normalizedEmail);
 
+  if (env.nodeEnv === 'production' && !canSendEmail) {
+    throw new AppError(
+      'Admin security key email service is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM in backend environment.',
+      StatusCodes.SERVICE_UNAVAILABLE
+    );
+  }
+
   const user = await User.findOne({ email: normalizedEmail, role: ROLES.ADMIN })
     .select('+adminLoginKeyHash +adminLoginKeyExpiresAt +adminLoginKeyRequestedAt +adminLoginKeyAttempts');
 
@@ -223,6 +230,13 @@ const requestAdminLoginSecurityKey = async ({ email }) => {
     key,
     expiryMinutes: env.adminSecurityKeyExpiryMinutes
   });
+
+  if (!emailResult.sent && env.nodeEnv === 'production') {
+    throw new AppError(
+      'Failed to send admin security key email. Verify SMTP configuration and sender permissions.',
+      StatusCodes.BAD_GATEWAY
+    );
+  }
 
   return {
     accepted: true,
