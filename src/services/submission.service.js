@@ -8,6 +8,8 @@ const { sanitizeStudentQuestion } = require('../utils/questionMapper');
 const { autoEvaluateSubmission } = require('./evaluation.service');
 const { getPagination, getPaginationMeta } = require('../utils/pagination');
 
+const PRACTICAL_REQUIRED_STEPS = 10;
+
 const shuffleQuestions = (questions) => {
   const shuffled = [...questions];
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -15,6 +17,22 @@ const shuffleQuestions = (questions) => {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+};
+
+const hasRequiredPracticalSteps = (answerText) => {
+  const text = String(answerText || '');
+  if (!text.trim()) {
+    return false;
+  }
+
+  for (let step = 1; step <= PRACTICAL_REQUIRED_STEPS; step += 1) {
+    const pattern = new RegExp(`(^|\\n)\\s*(?:step\\s*)?${step}\\s*[\\).:-]`, 'i');
+    if (!pattern.test(text)) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 const getStudentDashboard = async ({ userId }) => {
@@ -133,6 +151,7 @@ const getTestDetailsForStudent = async ({ testId }) => {
     instructions: [
       'Maintain a stable internet connection throughout the exam.',
       'MCQ questions may apply negative marking if configured.',
+      'Practical answers must follow Step 1 to Step 10 format.',
       'Practical and viva sections are reviewed manually when needed.',
       'Do not refresh the page while recording viva responses.'
     ]
@@ -343,6 +362,20 @@ const submitFinalTest = async ({ submissionId, userId }) => {
   }
 
   const questions = await Question.find({ testId: submission.testId }).lean();
+  const practicalQuestions = questions.filter((item) => item.type === 'practical');
+  for (const question of practicalQuestions) {
+    const practicalAnswer = submission.answers.find(
+      (item) => String(item.questionId) === String(question._id)
+    );
+
+    if (!practicalAnswer || !hasRequiredPracticalSteps(practicalAnswer.writtenAnswer)) {
+      throw new AppError(
+        `Practical answer for "${question.questionText}" must include Step 1 to Step ${PRACTICAL_REQUIRED_STEPS}.`,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  }
+
   const { totalScore, pendingManualReview } = autoEvaluateSubmission({
     submission,
     questions,
