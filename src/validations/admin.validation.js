@@ -19,10 +19,6 @@ const questionBodySchema = z.object({
     }
   }
 
-  if (value.type === 'practical' && !value.expectedAnswer) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Practical requires expectedAnswer', path: ['expectedAnswer'] });
-  }
-
   if (value.type === 'viva') {
     if (!value.keywords || value.keywords.length === 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Viva requires keywords', path: ['keywords'] });
