@@ -17,8 +17,8 @@ const getDashboard = asyncHandler(async (req, res) => {
   });
 });
 
-const getAvailableTests = asyncHandler(async (_req, res) => {
-  const tests = await submissionService.getAvailableTests();
+const getAvailableTests = asyncHandler(async (req, res) => {
+  const tests = await submissionService.getAvailableTests({ userId: req.user.id });
   return successResponse(res, {
     message: 'Published tests fetched successfully',
     data: tests

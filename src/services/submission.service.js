@@ -67,8 +67,22 @@ const getStudentDashboard = async ({ userId }) => {
   };
 };
 
-const getAvailableTests = async () => {
-  const tests = await Test.find({ isPublished: true })
+const getAvailableTests = async ({ userId }) => {
+  const finalizedStatuses = [
+    SUBMISSION_STATUS.SUBMITTED,
+    SUBMISSION_STATUS.PENDING_REVIEW,
+    SUBMISSION_STATUS.REVIEWED
+  ];
+
+  const completedTestIds = await Submission.distinct('testId', {
+    userId,
+    status: { $in: finalizedStatuses }
+  });
+
+  const tests = await Test.find({
+    isPublished: true,
+    _id: { $nin: completedTestIds }
+  })
     .select('title subject description duration totalMarks negativeMarking isPublished createdAt')
     .sort({ createdAt: -1 })
     .lean();
@@ -101,12 +115,19 @@ const startTestAttempt = async ({ userId, testId }) => {
     throw new AppError('Test not found or unpublished', StatusCodes.NOT_FOUND);
   }
 
-  const existing = await Submission.findOne({ userId, testId });
-  if (existing) {
-    if (existing.status !== SUBMISSION_STATUS.IN_PROGRESS) {
-      throw new AppError('Submission already completed for this test', StatusCodes.BAD_REQUEST);
-    }
-    return existing;
+  const existingSubmissions = await Submission.find({ userId, testId }).sort({ createdAt: -1 });
+  const finalizedSubmission = existingSubmissions.find(
+    (item) => item.status !== SUBMISSION_STATUS.IN_PROGRESS
+  );
+  if (finalizedSubmission) {
+    throw new AppError('You can attempt this test only once', StatusCodes.BAD_REQUEST);
+  }
+
+  const inProgressSubmission = existingSubmissions.find(
+    (item) => item.status === SUBMISSION_STATUS.IN_PROGRESS
+  );
+  if (inProgressSubmission) {
+    return inProgressSubmission;
   }
 
   const questions = await Question.find({ testId }).select('_id type').lean();
@@ -128,13 +149,28 @@ const startTestAttempt = async ({ userId, testId }) => {
     isReviewed: question.type === 'mcq'
   }));
 
-  const submission = await Submission.create({
-    userId,
-    testId,
-    status: SUBMISSION_STATUS.IN_PROGRESS,
-    answers,
-    totalScore: 0
-  });
+  let submission;
+  try {
+    submission = await Submission.create({
+      userId,
+      testId,
+      status: SUBMISSION_STATUS.IN_PROGRESS,
+      answers,
+      totalScore: 0
+    });
+  } catch (error) {
+    // Handle race conditions where two start requests arrive at the same time.
+    if (error?.code === 11000) {
+      const existing = await Submission.findOne({ userId, testId });
+      if (existing) {
+        if (existing.status !== SUBMISSION_STATUS.IN_PROGRESS) {
+          throw new AppError('You can attempt this test only once', StatusCodes.BAD_REQUEST);
+        }
+        return existing;
+      }
+    }
+    throw error;
+  }
 
   return submission;
 };
@@ -143,6 +179,13 @@ const getStudentQuestions = async ({ testId, userId }) => {
   const submission = await Submission.findOne({ testId, userId });
   if (!submission) {
     throw new AppError('Please start test before fetching questions', StatusCodes.BAD_REQUEST);
+  }
+
+  if (submission.status !== SUBMISSION_STATUS.IN_PROGRESS) {
+    throw new AppError(
+      'This test is already submitted. Multiple attempts are not allowed.',
+      StatusCodes.BAD_REQUEST
+    );
   }
 
   const orderedQuestionIds = submission.answers.map((answer) => answer.questionId);
