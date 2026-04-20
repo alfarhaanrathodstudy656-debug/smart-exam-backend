@@ -64,6 +64,12 @@ const submissionSchema = new mongoose.Schema({
     default: SUBMISSION_STATUS.IN_PROGRESS,
     index: true
   },
+  attemptNumber: {
+    type: Number,
+    required: true,
+    min: 1,
+    default: 1
+  },
   totalScore: {
     type: Number,
     default: 0
@@ -76,7 +82,7 @@ const submissionSchema = new mongoose.Schema({
   timestamps: { createdAt: true, updatedAt: true }
 });
 
-submissionSchema.index({ userId: 1, testId: 1 }, { unique: true });
+submissionSchema.index({ userId: 1, testId: 1, attemptNumber: 1 });
 submissionSchema.index({ testId: 1, status: 1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);

@@ -41,6 +41,7 @@ const createTestSchema = z.object({
     duration: z.number().int().positive(),
     totalMarks: z.number().positive(),
     negativeMarking: z.number().min(0).max(1).optional(),
+    maxAttemptsPerStudent: z.number().int().min(1).max(20).optional(),
     isPublished: z.boolean().optional()
   }),
   params: z.object({}).passthrough(),
@@ -55,6 +56,7 @@ const updateTestSchema = z.object({
     duration: z.number().int().positive().optional(),
     totalMarks: z.number().positive().optional(),
     negativeMarking: z.number().min(0).max(1).optional(),
+    maxAttemptsPerStudent: z.number().int().min(1).max(20).optional(),
     isPublished: z.boolean().optional()
   }).refine((obj) => Object.keys(obj).length > 0, 'At least one field is required'),
   params: z.object({ testId: objectId }),

@@ -68,26 +68,56 @@ const getStudentDashboard = async ({ userId }) => {
 };
 
 const getAvailableTests = async ({ userId }) => {
+  const tests = await Test.find({ isPublished: true })
+    .select(
+      'title subject description duration totalMarks negativeMarking maxAttemptsPerStudent isPublished createdAt'
+    )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!tests.length) {
+    return [];
+  }
+
   const finalizedStatuses = [
     SUBMISSION_STATUS.SUBMITTED,
     SUBMISSION_STATUS.PENDING_REVIEW,
     SUBMISSION_STATUS.REVIEWED
   ];
 
-  const completedTestIds = await Submission.distinct('testId', {
+  const testIds = tests.map((test) => test._id);
+  const submissions = await Submission.find({
     userId,
-    status: { $in: finalizedStatuses }
-  });
-
-  const tests = await Test.find({
-    isPublished: true,
-    _id: { $nin: completedTestIds }
+    testId: { $in: testIds }
   })
-    .select('title subject description duration totalMarks negativeMarking isPublished createdAt')
-    .sort({ createdAt: -1 })
+    .select('testId status')
     .lean();
 
-  return tests;
+  const attemptMap = new Map();
+  submissions.forEach((submission) => {
+    const key = String(submission.testId);
+    const current = attemptMap.get(key) || { finalized: 0, inProgress: false };
+
+    if (submission.status === SUBMISSION_STATUS.IN_PROGRESS) {
+      current.inProgress = true;
+    } else if (finalizedStatuses.includes(submission.status)) {
+      current.finalized += 1;
+    }
+
+    attemptMap.set(key, current);
+  });
+
+  return tests.filter((test) => {
+    const key = String(test._id);
+    const usage = attemptMap.get(key) || { finalized: 0, inProgress: false };
+    const allowedAttempts = Math.max(1, Number(test.maxAttemptsPerStudent || 1));
+
+    if (usage.inProgress) {
+      return true;
+    }
+
+    return usage.finalized < allowedAttempts;
+  });
 };
 
 const getTestDetailsForStudent = async ({ testId }) => {
@@ -115,20 +145,31 @@ const startTestAttempt = async ({ userId, testId }) => {
     throw new AppError('Test not found or unpublished', StatusCodes.NOT_FOUND);
   }
 
+  const allowedAttempts = Math.max(1, Number(test.maxAttemptsPerStudent || 1));
   const existingSubmissions = await Submission.find({ userId, testId }).sort({ createdAt: -1 });
-  const finalizedSubmission = existingSubmissions.find(
-    (item) => item.status !== SUBMISSION_STATUS.IN_PROGRESS
-  );
-  if (finalizedSubmission) {
-    throw new AppError('You can attempt this test only once', StatusCodes.BAD_REQUEST);
-  }
-
   const inProgressSubmission = existingSubmissions.find(
     (item) => item.status === SUBMISSION_STATUS.IN_PROGRESS
   );
   if (inProgressSubmission) {
     return inProgressSubmission;
   }
+
+  const finalizedSubmissions = existingSubmissions.filter(
+    (item) => item.status !== SUBMISSION_STATUS.IN_PROGRESS
+  );
+
+  if (finalizedSubmissions.length >= allowedAttempts) {
+    throw new AppError(
+      `Attempt limit reached. Allowed attempts: ${allowedAttempts}`,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const lastAttemptNumber = existingSubmissions.reduce((max, item) => {
+    const current = Number(item.attemptNumber || 0);
+    return current > max ? current : max;
+  }, 0);
+  const nextAttemptNumber = lastAttemptNumber + 1;
 
   const questions = await Question.find({ testId }).select('_id type').lean();
   if (!questions.length) {
@@ -155,18 +196,31 @@ const startTestAttempt = async ({ userId, testId }) => {
       userId,
       testId,
       status: SUBMISSION_STATUS.IN_PROGRESS,
+      attemptNumber: nextAttemptNumber,
       answers,
       totalScore: 0
     });
   } catch (error) {
     // Handle race conditions where two start requests arrive at the same time.
     if (error?.code === 11000) {
-      const existing = await Submission.findOne({ userId, testId });
-      if (existing) {
-        if (existing.status !== SUBMISSION_STATUS.IN_PROGRESS) {
-          throw new AppError('You can attempt this test only once', StatusCodes.BAD_REQUEST);
-        }
-        return existing;
+      const existing = await Submission.find({ userId, testId }).sort({ createdAt: -1 });
+      const inProgress = existing.find((item) => item.status === SUBMISSION_STATUS.IN_PROGRESS);
+      if (inProgress) {
+        return inProgress;
+      }
+
+      const finalizedCount = existing.filter(
+        (item) => item.status !== SUBMISSION_STATUS.IN_PROGRESS
+      ).length;
+      if (finalizedCount >= allowedAttempts) {
+        throw new AppError(
+          `Attempt limit reached. Allowed attempts: ${allowedAttempts}`,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+
+      if (existing[0]) {
+        return existing[0];
       }
     }
     throw error;
@@ -176,14 +230,15 @@ const startTestAttempt = async ({ userId, testId }) => {
 };
 
 const getStudentQuestions = async ({ testId, userId }) => {
-  const submission = await Submission.findOne({ testId, userId });
+  const attempts = await Submission.find({ testId, userId }).sort({ createdAt: -1 });
+  const submission = attempts.find((item) => item.status === SUBMISSION_STATUS.IN_PROGRESS) || attempts[0];
   if (!submission) {
     throw new AppError('Please start test before fetching questions', StatusCodes.BAD_REQUEST);
   }
 
   if (submission.status !== SUBMISSION_STATUS.IN_PROGRESS) {
     throw new AppError(
-      'This test is already submitted. Multiple attempts are not allowed.',
+      'No active test attempt found. Start a new attempt if attempts are remaining.',
       StatusCodes.BAD_REQUEST
     );
   }

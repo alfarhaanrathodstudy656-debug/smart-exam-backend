@@ -35,6 +35,12 @@ const testSchema = new mongoose.Schema({
     min: 0,
     max: 1
   },
+  maxAttemptsPerStudent: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 20
+  },
   isPublished: {
     type: Boolean,
     default: false,
