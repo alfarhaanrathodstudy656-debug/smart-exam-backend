@@ -5,7 +5,6 @@ const {
   registerStudentSchema,
   loginSchema,
   googleAuthSchema,
-  requestAdminSecurityKeySchema,
   requestPasswordResetOtpSchema,
   resetPasswordWithOtpSchema
 } = require('../validations/auth.validation');
@@ -14,7 +13,6 @@ const router = express.Router();
 
 router.post('/student/register', validate(registerStudentSchema), authController.registerStudent);
 router.post('/student/login', validate(loginSchema), authController.studentLogin);
-router.post('/admin/security-key/request', validate(requestAdminSecurityKeySchema), authController.requestAdminSecurityKey);
 router.post('/admin/login', validate(loginSchema), authController.adminLogin);
 
 router.post('/google', validate(googleAuthSchema), authController.googleAuth);

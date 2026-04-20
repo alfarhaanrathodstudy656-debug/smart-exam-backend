@@ -23,8 +23,7 @@ const registerStudentSchema = z.object({
 const loginSchema = z.object({
   body: z.object({
     email: z.string().email(),
-    password: z.string().min(6).max(128),
-    adminAccessKey: z.string().min(4).max(128).optional()
+    password: z.string().min(6).max(128)
   }),
   params: z.object({}).passthrough(),
   query: z.object({}).passthrough()
@@ -34,8 +33,7 @@ const googleAuthSchema = z.object({
   body: z.object({
     idToken: z.string().min(20),
     role: z.enum([ROLES.ADMIN, ROLES.STUDENT]).optional().default(ROLES.STUDENT),
-    intent: z.enum(['login', 'register']).optional().default('login'),
-    adminAccessKey: z.string().min(4).max(128).optional()
+    intent: z.enum(['login', 'register']).optional().default('login')
   }),
   params: z.object({}).passthrough(),
   query: z.object({}).passthrough()
@@ -44,16 +42,7 @@ const googleAuthSchema = z.object({
 const requestPasswordResetOtpSchema = z.object({
   body: z.object({
     email: z.string().email(),
-    role: z.enum([ROLES.ADMIN, ROLES.STUDENT]).optional(),
-    adminAccessKey: z.string().min(4).max(128).optional()
-  }),
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough()
-});
-
-const requestAdminSecurityKeySchema = z.object({
-  body: z.object({
-    email: z.string().email()
+    role: z.enum([ROLES.ADMIN, ROLES.STUDENT]).optional()
   }),
   params: z.object({}).passthrough(),
   query: z.object({}).passthrough()
@@ -64,8 +53,7 @@ const resetPasswordWithOtpSchema = z.object({
     email: z.string().email(),
     role: z.enum([ROLES.ADMIN, ROLES.STUDENT]).optional(),
     otp: z.string().regex(/^\d{6}$/, 'OTP must be a 6-digit code'),
-    newPassword: strongPasswordSchema,
-    adminAccessKey: z.string().min(4).max(128).optional()
+    newPassword: strongPasswordSchema
   }),
   params: z.object({}).passthrough(),
   query: z.object({}).passthrough()
@@ -75,7 +63,6 @@ module.exports = {
   registerStudentSchema,
   loginSchema,
   googleAuthSchema,
-  requestAdminSecurityKeySchema,
   requestPasswordResetOtpSchema,
   resetPasswordWithOtpSchema
 };

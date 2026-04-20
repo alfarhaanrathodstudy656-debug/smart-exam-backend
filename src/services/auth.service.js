@@ -6,7 +6,7 @@ const { generateToken } = require('../utils/jwt');
 const ROLES = require('../constants/roles');
 const env = require('../config/env');
 const { generateNumericOtp, hashOtp } = require('../utils/otp');
-const { sendPasswordResetOtpEmail, sendAdminSecurityKeyEmail, canSendEmail } = require('./email.service');
+const { sendPasswordResetOtpEmail, canSendEmail } = require('./email.service');
 
 const oauthClient = env.googleClientId ? new OAuth2Client(env.googleClientId) : null;
 const ACCOUNT_LOCK_STATUS = 423;
@@ -31,64 +31,6 @@ const getLockConfigByRole = (role) => {
     threshold: Math.max(3, Number(env.loginLockThreshold || 8)),
     durationMinutes: Math.max(5, Number(env.loginLockDurationMinutes || 15))
   };
-};
-
-const normalizeSecret = (value) => (value || '').trim();
-
-const assertAdminPortalAccessKey = (adminAccessKey) => {
-  const configuredKey = normalizeSecret(env.adminPortalAccessKey);
-  if (!configuredKey) {
-    return;
-  }
-
-  if (configuredKey && normalizeSecret(adminAccessKey) === configuredKey) {
-    return;
-  }
-
-  throw new AppError('Admin security key is invalid.', StatusCodes.FORBIDDEN);
-};
-
-const clearAdminSecurityKeyState = async (user) => {
-  user.adminLoginKeyHash = null;
-  user.adminLoginKeyExpiresAt = null;
-  user.adminLoginKeyRequestedAt = null;
-  user.adminLoginKeyAttempts = 0;
-  await user.save();
-};
-
-const assertAdminOneTimeSecurityKey = async (user, adminAccessKey) => {
-  const providedKey = normalizeSecret(adminAccessKey);
-  if (!providedKey) {
-    throw new AppError('Admin security key is required. Request a key sent to your email.', StatusCodes.FORBIDDEN);
-  }
-
-  const configuredKey = normalizeSecret(env.adminPortalAccessKey);
-  if (configuredKey && providedKey === configuredKey) {
-    return;
-  }
-
-  if (!user.adminLoginKeyHash || !user.adminLoginKeyExpiresAt) {
-    throw new AppError('Admin security key is missing or expired. Request a new key.', StatusCodes.FORBIDDEN);
-  }
-
-  if (user.adminLoginKeyExpiresAt.getTime() < Date.now()) {
-    await clearAdminSecurityKeyState(user);
-    throw new AppError('Admin security key expired. Request a new key.', StatusCodes.FORBIDDEN);
-  }
-
-  const currentAttempts = Number(user.adminLoginKeyAttempts || 0);
-  if (currentAttempts >= 5) {
-    await clearAdminSecurityKeyState(user);
-    throw new AppError('Too many invalid security key attempts. Request a new key.', StatusCodes.TOO_MANY_REQUESTS);
-  }
-
-  if (hashOtp(providedKey) !== user.adminLoginKeyHash) {
-    user.adminLoginKeyAttempts = currentAttempts + 1;
-    await user.save();
-    throw new AppError('Invalid admin security key.', StatusCodes.FORBIDDEN);
-  }
-
-  await clearAdminSecurityKeyState(user);
 };
 
 const ensureAccountNotLocked = (user) => {
@@ -155,16 +97,13 @@ const registerStudent = async ({ name, email, password }) => {
   return { user: sanitizeUser(user), token };
 };
 
-const loginByRole = async ({ email, password, role, adminAccessKey }) => {
+const loginByRole = async ({ email, password, role }) => {
   const normalizedEmail = email.toLowerCase();
   if (role === ROLES.ADMIN) {
     assertPrimaryAdminEmail(normalizedEmail);
   }
 
-  const user = await User.findOne({ email: normalizedEmail, role })
-    .select(
-      '+password +failedLoginAttempts +lockUntil +adminLoginKeyHash +adminLoginKeyExpiresAt +adminLoginKeyRequestedAt +adminLoginKeyAttempts'
-    );
+  const user = await User.findOne({ email: normalizedEmail, role }).select('+password +failedLoginAttempts +lockUntil');
 
   if (!user) {
     throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED);
@@ -182,70 +121,10 @@ const loginByRole = async ({ email, password, role, adminAccessKey }) => {
     throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED);
   }
 
-  if (role === ROLES.ADMIN) {
-    await assertAdminOneTimeSecurityKey(user, adminAccessKey);
-  }
-
   await clearLoginProtectionState(user);
 
   const token = generateToken({ userId: user._id, role: user.role });
   return { user: sanitizeUser(user), token };
-};
-
-const requestAdminLoginSecurityKey = async ({ email }) => {
-  const normalizedEmail = email.toLowerCase();
-  assertPrimaryAdminEmail(normalizedEmail);
-
-  if (env.nodeEnv === 'production' && !canSendEmail) {
-    throw new AppError(
-      'Admin security key email service is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM in backend environment.',
-      StatusCodes.SERVICE_UNAVAILABLE
-    );
-  }
-
-  const user = await User.findOne({ email: normalizedEmail, role: ROLES.ADMIN })
-    .select('+adminLoginKeyHash +adminLoginKeyExpiresAt +adminLoginKeyRequestedAt +adminLoginKeyAttempts');
-
-  if (!user) {
-    return {
-      accepted: true,
-      email: normalizedEmail,
-      expiresInMinutes: env.adminSecurityKeyExpiryMinutes
-    };
-  }
-
-  const key = generateNumericOtp(6);
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + (env.adminSecurityKeyExpiryMinutes * 60 * 1000));
-
-  user.adminLoginKeyHash = hashOtp(key);
-  user.adminLoginKeyExpiresAt = expiresAt;
-  user.adminLoginKeyRequestedAt = now;
-  user.adminLoginKeyAttempts = 0;
-  await user.save();
-
-  const emailResult = await sendAdminSecurityKeyEmail({
-    to: user.email,
-    name: user.name,
-    key,
-    expiryMinutes: env.adminSecurityKeyExpiryMinutes
-  });
-
-  if (!emailResult.sent && env.nodeEnv === 'production') {
-    throw new AppError(
-      'Failed to send admin security key email. Verify SMTP configuration and sender permissions.',
-      StatusCodes.BAD_GATEWAY
-    );
-  }
-
-  return {
-    accepted: true,
-    email: user.email,
-    expiresInMinutes: env.adminSecurityKeyExpiryMinutes,
-    emailSent: emailResult.sent,
-    fallbackDelivery: !emailResult.sent,
-    ...(env.nodeEnv !== 'production' && !canSendEmail ? { devSecurityKey: key } : {})
-  };
 };
 
 const verifyGoogleToken = async (idToken) => {
@@ -285,13 +164,10 @@ const assertAdminGoogleAllowed = (email) => {
   throw new AppError('Google admin login is not allowed for this email', StatusCodes.FORBIDDEN);
 };
 
-const handleGoogleAuth = async ({ idToken, role = ROLES.STUDENT, intent = 'login', adminAccessKey }) => {
+const handleGoogleAuth = async ({ idToken, role = ROLES.STUDENT, intent = 'login' }) => {
   const profile = await verifyGoogleToken(idToken);
 
-  let user = await User.findOne({ email: profile.email })
-    .select(
-      '+password +failedLoginAttempts +lockUntil +adminLoginKeyHash +adminLoginKeyExpiresAt +adminLoginKeyRequestedAt +adminLoginKeyAttempts'
-    );
+  let user = await User.findOne({ email: profile.email }).select('+password +failedLoginAttempts +lockUntil');
 
   if (role === ROLES.ADMIN) {
     assertAdminGoogleAllowed(profile.email);
@@ -328,20 +204,12 @@ const handleGoogleAuth = async ({ idToken, role = ROLES.STUDENT, intent = 'login
     await user.save();
   }
 
-  if (role === ROLES.ADMIN) {
-    await assertAdminOneTimeSecurityKey(user, adminAccessKey);
-  }
-
   const token = generateToken({ userId: user._id, role: user.role });
   return { user: sanitizeUser(user), token };
 };
 
-const requestPasswordResetOtp = async ({ email, role, adminAccessKey }) => {
+const requestPasswordResetOtp = async ({ email, role }) => {
   const normalizedEmail = email.toLowerCase();
-
-  if (role === ROLES.ADMIN) {
-    assertAdminPortalAccessKey(adminAccessKey);
-  }
 
   const query = role ? { email: normalizedEmail, role } : { email: normalizedEmail };
   const user = await User.findOne(query).select('+resetOtpHash +resetOtpExpiresAt +resetOtpRequestedAt +resetOtpAttempts');
@@ -381,12 +249,8 @@ const requestPasswordResetOtp = async ({ email, role, adminAccessKey }) => {
   };
 };
 
-const resetPasswordWithOtp = async ({ email, otp, newPassword, role, adminAccessKey }) => {
+const resetPasswordWithOtp = async ({ email, otp, newPassword, role }) => {
   const normalizedEmail = email.toLowerCase();
-
-  if (role === ROLES.ADMIN) {
-    assertAdminPortalAccessKey(adminAccessKey);
-  }
 
   const query = role ? { email: normalizedEmail, role } : { email: normalizedEmail };
 
@@ -451,7 +315,6 @@ const ensureDefaultAdmin = async () => {
 module.exports = {
   registerStudent,
   loginByRole,
-  requestAdminLoginSecurityKey,
   handleGoogleAuth,
   requestPasswordResetOtp,
   resetPasswordWithOtp,

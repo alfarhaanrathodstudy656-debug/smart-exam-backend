@@ -55,26 +55,6 @@ const userSchema = new mongoose.Schema({
     default: 0,
     select: false
   },
-  adminLoginKeyHash: {
-    type: String,
-    select: false,
-    default: null
-  },
-  adminLoginKeyExpiresAt: {
-    type: Date,
-    select: false,
-    default: null
-  },
-  adminLoginKeyRequestedAt: {
-    type: Date,
-    select: false,
-    default: null
-  },
-  adminLoginKeyAttempts: {
-    type: Number,
-    default: 0,
-    select: false
-  },
   failedLoginAttempts: {
     type: Number,
     default: 0,
@@ -117,10 +97,6 @@ userSchema.set('toJSON', {
     delete ret.resetOtpExpiresAt;
     delete ret.resetOtpRequestedAt;
     delete ret.resetOtpAttempts;
-    delete ret.adminLoginKeyHash;
-    delete ret.adminLoginKeyExpiresAt;
-    delete ret.adminLoginKeyRequestedAt;
-    delete ret.adminLoginKeyAttempts;
     delete ret.failedLoginAttempts;
     delete ret.lockUntil;
     return ret;

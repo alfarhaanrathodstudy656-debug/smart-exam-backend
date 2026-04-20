@@ -27,7 +27,6 @@ const env = {
     .split(',')
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean),
-  adminSecurityKeyExpiryMinutes: Number(process.env.ADMIN_SECURITY_KEY_EXPIRY_MINUTES || 10),
   passwordResetOtpExpiryMinutes: Number(process.env.PASSWORD_RESET_OTP_EXPIRY_MINUTES || 10),
   adminPortalAccessKey: process.env.ADMIN_PORTAL_ACCESS_KEY || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
