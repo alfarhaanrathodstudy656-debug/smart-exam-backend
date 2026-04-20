@@ -51,6 +51,14 @@ const requestPasswordResetOtpSchema = z.object({
   query: z.object({}).passthrough()
 });
 
+const requestAdminSecurityKeySchema = z.object({
+  body: z.object({
+    email: z.string().email()
+  }),
+  params: z.object({}).passthrough(),
+  query: z.object({}).passthrough()
+});
+
 const resetPasswordWithOtpSchema = z.object({
   body: z.object({
     email: z.string().email(),
@@ -67,6 +75,7 @@ module.exports = {
   registerStudentSchema,
   loginSchema,
   googleAuthSchema,
+  requestAdminSecurityKeySchema,
   requestPasswordResetOtpSchema,
   resetPasswordWithOtpSchema
 };

@@ -40,7 +40,33 @@ const sendPasswordResetOtpEmail = async ({ to, name, otp, expiryMinutes }) => {
   return { sent: true };
 };
 
+const sendAdminSecurityKeyEmail = async ({ to, name, key, expiryMinutes }) => {
+  if (!transporter) {
+    return { sent: false };
+  }
+
+  await transporter.sendMail({
+    from: env.smtp.from,
+    to,
+    subject: 'Smart Exam Admin Security Key',
+    text: `Hi ${name || 'Admin'}, your admin security key is ${key}. It expires in ${expiryMinutes} minutes.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Smart Exam Admin Login</h2>
+        <p>Hi ${name || 'Admin'},</p>
+        <p>Your admin security key is:</p>
+        <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${key}</p>
+        <p>This key expires in <strong>${expiryMinutes} minutes</strong> and can be used once.</p>
+        <p>If you did not request this, secure your account immediately.</p>
+      </div>
+    `
+  });
+
+  return { sent: true };
+};
+
 module.exports = {
   canSendEmail,
-  sendPasswordResetOtpEmail
+  sendPasswordResetOtpEmail,
+  sendAdminSecurityKeyEmail
 };

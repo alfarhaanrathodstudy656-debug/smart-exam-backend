@@ -63,6 +63,15 @@ const adminLogin = asyncHandler(async (req, res) => {
   });
 });
 
+const requestAdminSecurityKey = asyncHandler(async (req, res) => {
+  const result = await authService.requestAdminLoginSecurityKey(req.body);
+
+  return successResponse(res, {
+    message: 'Admin security key generated and sent if email service is configured.',
+    data: result
+  });
+});
+
 const googleAuth = asyncHandler(async (req, res) => {
   const result = await authService.handleGoogleAuth(req.body);
 
@@ -162,6 +171,7 @@ module.exports = {
   registerStudent,
   studentLogin,
   adminLogin,
+  requestAdminSecurityKey,
   googleAuth,
   googleConfig,
   requestPasswordResetOtp,
