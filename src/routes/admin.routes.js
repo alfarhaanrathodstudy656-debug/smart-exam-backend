@@ -2,6 +2,7 @@ const express = require('express');
 const adminController = require('../controllers/admin.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 const authorize = require('../middleware/role.middleware');
+const primaryAdminOnly = require('../middleware/primaryAdmin.middleware');
 const validate = require('../middleware/validate.middleware');
 const ROLES = require('../constants/roles');
 const {
@@ -21,7 +22,7 @@ const {
 
 const router = express.Router();
 
-router.use(authMiddleware, authorize(ROLES.ADMIN));
+router.use(authMiddleware, authorize(ROLES.ADMIN), primaryAdminOnly);
 
 router.get('/dashboard', adminController.getAdminDashboard);
 

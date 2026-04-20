@@ -54,6 +54,16 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     select: false
+  },
+  failedLoginAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  },
+  lockUntil: {
+    type: Date,
+    default: null,
+    select: false
   }
 }, {
   timestamps: { createdAt: true, updatedAt: true }
@@ -87,6 +97,8 @@ userSchema.set('toJSON', {
     delete ret.resetOtpExpiresAt;
     delete ret.resetOtpRequestedAt;
     delete ret.resetOtpAttempts;
+    delete ret.failedLoginAttempts;
+    delete ret.lockUntil;
     return ret;
   }
 });

@@ -15,10 +15,11 @@ const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
 
-const { apiLimiter, authLimiter } = createSecurityLimiters({
+const { apiLimiter, authLimiter, adminAuthLimiter } = createSecurityLimiters({
   windowMinutes: env.rateLimitWindowMinutes,
   maxRequests: env.rateLimitMaxRequests,
-  authMaxRequests: env.authRateLimitMaxRequests
+  authMaxRequests: env.authRateLimitMaxRequests,
+  adminAuthMaxRequests: env.adminAuthRateLimitMaxRequests
 });
 
 const devOriginPattern = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
@@ -65,6 +66,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
 }));
 
 app.use('/api', apiLimiter);
+app.use('/api/auth/admin', adminAuthLimiter);
 app.use('/api/auth', authLimiter);
 app.use('/api', routes);
 

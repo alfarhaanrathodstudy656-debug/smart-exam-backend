@@ -28,6 +28,7 @@ const env = {
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean),
   passwordResetOtpExpiryMinutes: Number(process.env.PASSWORD_RESET_OTP_EXPIRY_MINUTES || 10),
+  adminPortalAccessKey: process.env.ADMIN_PORTAL_ACCESS_KEY || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
   openaiBaseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
@@ -35,6 +36,11 @@ const env = {
   rateLimitWindowMinutes: Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 15),
   rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 250),
   authRateLimitMaxRequests: Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || 20),
+  adminAuthRateLimitMaxRequests: Number(process.env.ADMIN_AUTH_RATE_LIMIT_MAX_REQUESTS || 8),
+  loginLockThreshold: Number(process.env.LOGIN_LOCK_THRESHOLD || 8),
+  loginLockDurationMinutes: Number(process.env.LOGIN_LOCK_DURATION_MINUTES || 15),
+  adminLoginLockThreshold: Number(process.env.ADMIN_LOGIN_LOCK_THRESHOLD || 5),
+  adminLoginLockDurationMinutes: Number(process.env.ADMIN_LOGIN_LOCK_DURATION_MINUTES || 30),
   smtp: {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
