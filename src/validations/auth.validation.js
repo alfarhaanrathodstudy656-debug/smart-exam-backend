@@ -1,11 +1,20 @@
 const { z } = require('./common.validation');
 const ROLES = require('../constants/roles');
 
+const strongPasswordSchema = z
+  .string()
+  .min(8)
+  .max(128)
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/,
+    'Password must include uppercase, lowercase, number, and special character'
+  );
+
 const registerStudentSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120),
     email: z.string().email(),
-    password: z.string().min(6).max(128)
+    password: strongPasswordSchema
   }),
   params: z.object({}).passthrough(),
   query: z.object({}).passthrough()
@@ -47,7 +56,7 @@ const resetPasswordWithOtpSchema = z.object({
     email: z.string().email(),
     role: z.enum([ROLES.ADMIN, ROLES.STUDENT]).optional(),
     otp: z.string().regex(/^\d{6}$/, 'OTP must be a 6-digit code'),
-    newPassword: z.string().min(8).max(128),
+    newPassword: strongPasswordSchema,
     adminAccessKey: z.string().min(4).max(128).optional()
   }),
   params: z.object({}).passthrough(),

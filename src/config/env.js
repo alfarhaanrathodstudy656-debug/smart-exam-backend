@@ -36,6 +36,7 @@ const env = {
   rateLimitWindowMinutes: Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 15),
   rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 250),
   authRateLimitMaxRequests: Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || 20),
+  userAuthRateLimitMaxRequests: Number(process.env.USER_AUTH_RATE_LIMIT_MAX_REQUESTS || 12),
   adminAuthRateLimitMaxRequests: Number(process.env.ADMIN_AUTH_RATE_LIMIT_MAX_REQUESTS || 8),
   loginLockThreshold: Number(process.env.LOGIN_LOCK_THRESHOLD || 8),
   loginLockDurationMinutes: Number(process.env.LOGIN_LOCK_DURATION_MINUTES || 15),

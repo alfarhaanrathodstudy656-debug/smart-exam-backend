@@ -15,10 +15,11 @@ const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
 
-const { apiLimiter, authLimiter, adminAuthLimiter } = createSecurityLimiters({
+const { apiLimiter, authLimiter, userAuthLimiter, adminAuthLimiter } = createSecurityLimiters({
   windowMinutes: env.rateLimitWindowMinutes,
   maxRequests: env.rateLimitMaxRequests,
   authMaxRequests: env.authRateLimitMaxRequests,
+  userAuthMaxRequests: env.userAuthRateLimitMaxRequests,
   adminAuthMaxRequests: env.adminAuthRateLimitMaxRequests
 });
 
@@ -67,6 +68,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
 
 app.use('/api', apiLimiter);
 app.use('/api/auth/admin', adminAuthLimiter);
+app.use('/api/auth/student', userAuthLimiter);
 app.use('/api/auth', authLimiter);
 app.use('/api', routes);
 

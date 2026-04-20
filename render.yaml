@@ -60,6 +60,8 @@ services:
         value: "250"
       - key: AUTH_RATE_LIMIT_MAX_REQUESTS
         value: "20"
+      - key: USER_AUTH_RATE_LIMIT_MAX_REQUESTS
+        value: "12"
       - key: ADMIN_AUTH_RATE_LIMIT_MAX_REQUESTS
         value: "8"
       - key: LOGIN_LOCK_THRESHOLD
