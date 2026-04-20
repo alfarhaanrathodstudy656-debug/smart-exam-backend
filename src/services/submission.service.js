@@ -26,8 +26,9 @@ const hasRequiredPracticalSteps = (answerText) => {
   }
 
   for (let step = 1; step <= PRACTICAL_REQUIRED_STEPS; step += 1) {
-    const pattern = new RegExp(`(^|\\n)\\s*(?:step\\s*)?${step}\\s*[\\).:-]`, 'i');
-    if (!pattern.test(text)) {
+    const pattern = new RegExp(`(^|\\n)\\s*(?:step\\s*)?${step}\\s*[\\).:-]\\s*(.+)`, 'i');
+    const match = text.match(pattern);
+    if (!match || !String(match[2] || '').trim()) {
       return false;
     }
   }
