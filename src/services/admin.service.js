@@ -388,9 +388,24 @@ const getRecentActivityLogs = async ({ limit = 30 }) => {
 };
 
 const getAdminOverviewStats = async () => {
-  const [totalStudents, totalTests, pendingEvaluations, averagePassData] = await Promise.all([
+  const activeSince = new Date();
+  activeSince.setDate(activeSince.getDate() - 7);
+
+  const [totalStudents, totalTests, activeStudentsData, pendingEvaluations, averagePassData] = await Promise.all([
     User.countDocuments({ role: 'student' }),
-    Test.countDocuments(),
+    Test.countDocuments({ isPublished: true }),
+    Submission.aggregate([
+      {
+        $match: {
+          $or: [
+            { status: SUBMISSION_STATUS.IN_PROGRESS },
+            { updatedAt: { $gte: activeSince } }
+          ]
+        }
+      },
+      { $group: { _id: '$userId' } },
+      { $count: 'total' }
+    ]),
     Submission.countDocuments({ status: SUBMISSION_STATUS.PENDING_REVIEW }),
     Submission.aggregate([
       { $match: { status: { $in: [SUBMISSION_STATUS.PENDING_REVIEW, SUBMISSION_STATUS.REVIEWED] } } },
@@ -398,10 +413,12 @@ const getAdminOverviewStats = async () => {
     ])
   ]);
 
+  const activeStudents = Number(activeStudentsData[0]?.total || 0);
   const averagePassRate = averagePassData[0]?.avg ? Number(averagePassData[0].avg.toFixed(2)) : 0;
 
   return {
     totalStudents,
+    activeStudents,
     totalTests,
     pendingEvaluations,
     averagePassRate
