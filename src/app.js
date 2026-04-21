@@ -24,6 +24,7 @@ const { apiLimiter, authLimiter, userAuthLimiter, adminAuthLimiter } = createSec
 });
 
 const devOriginPattern = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const vercelProjectOriginPattern = /^https:\/\/smart-exam-system(?:-[a-z0-9-]+)?\.vercel\.app$/i;
 
 app.use(helmet());
 app.use(cors({
@@ -34,6 +35,11 @@ app.use(cors({
     }
 
     if (env.clientUrls.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    if (vercelProjectOriginPattern.test(origin)) {
       callback(null, true);
       return;
     }
