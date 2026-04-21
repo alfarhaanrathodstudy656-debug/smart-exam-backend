@@ -37,27 +37,78 @@ const hasRequiredPracticalSteps = (answerText) => {
 };
 
 const getStudentDashboard = async ({ userId }) => {
-  const [totalPublishedTests, completedSubmissions, reviewedSubmissions] = await Promise.all([
-    Test.countDocuments({ isPublished: true }),
-    Submission.find({
-      userId,
-      status: { $in: [SUBMISSION_STATUS.PENDING_REVIEW, SUBMISSION_STATUS.REVIEWED] }
-    })
-      .select('totalScore submittedAt status')
-      .sort({ submittedAt: -1 })
+  const finalizedStatuses = [
+    SUBMISSION_STATUS.SUBMITTED,
+    SUBMISSION_STATUS.PENDING_REVIEW,
+    SUBMISSION_STATUS.REVIEWED
+  ];
+
+  const [publishedTests, studentSubmissions, reviewedSubmissions] = await Promise.all([
+    Test.find({ isPublished: true })
+      .select('_id maxAttemptsPerStudent')
+      .lean(),
+    Submission.find({ userId })
+      .select('testId status submittedAt')
+      .sort({ submittedAt: -1, createdAt: -1 })
       .lean(),
     Submission.find({
       userId,
       status: SUBMISSION_STATUS.REVIEWED
     })
-      .select('submittedAt')
+      .select('testId submittedAt totalScore')
+      .populate('testId', 'totalMarks')
       .lean()
   ]);
 
-  const completedTests = completedSubmissions.length;
-  const upcomingTests = Math.max(0, totalPublishedTests - completedTests);
-  const averageScore = completedTests
-    ? Number((completedSubmissions.reduce((sum, item) => sum + Number(item.totalScore || 0), 0) / completedTests).toFixed(2))
+  const attemptMap = new Map();
+  studentSubmissions.forEach((submission) => {
+    const key = String(submission.testId);
+    const current = attemptMap.get(key) || { finalized: 0, inProgress: false };
+
+    if (submission.status === SUBMISSION_STATUS.IN_PROGRESS) {
+      current.inProgress = true;
+    } else if (finalizedStatuses.includes(submission.status)) {
+      current.finalized += 1;
+    }
+
+    attemptMap.set(key, current);
+  });
+
+  const upcomingTests = publishedTests.filter((test) => {
+    const key = String(test._id);
+    const usage = attemptMap.get(key) || { finalized: 0, inProgress: false };
+    const allowedAttempts = Math.max(1, Number(test.maxAttemptsPerStudent || 1));
+
+    if (usage.inProgress) {
+      return true;
+    }
+
+    return usage.finalized < allowedAttempts;
+  }).length;
+
+  const completedTests = studentSubmissions.filter((item) =>
+    finalizedStatuses.includes(item.status)
+  ).length;
+
+  const reviewedPercentages = reviewedSubmissions
+    .map((item) => {
+      const totalMarks = Number(item?.testId?.totalMarks || 0);
+      if (totalMarks <= 0) {
+        return null;
+      }
+
+      const percentage = (Number(item.totalScore || 0) / totalMarks) * 100;
+      return Math.max(0, Math.min(100, percentage));
+    })
+    .filter((value) => Number.isFinite(value));
+
+  const averageScore = reviewedPercentages.length
+    ? Number(
+      (
+        reviewedPercentages.reduce((sum, value) => sum + Number(value), 0) /
+        reviewedPercentages.length
+      ).toFixed(2)
+    )
     : 0;
 
   const dates = reviewedSubmissions
