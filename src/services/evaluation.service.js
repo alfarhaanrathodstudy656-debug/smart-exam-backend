@@ -97,6 +97,14 @@ const buildResultSummary = async ({ submission }) => {
     viva: { obtained: 0, total: 0 }
   };
 
+  const mcqStats = {
+    totalQuestions: 0,
+    attempted: 0,
+    correct: 0,
+    incorrect: 0,
+    unattempted: 0
+  };
+
   submission.answers.forEach((answer) => {
     const question = map.get(String(answer.questionId));
     if (!question) {
@@ -106,6 +114,25 @@ const buildResultSummary = async ({ submission }) => {
     const section = breakdownMap[answer.type] || breakdownMap.practical;
     section.obtained += Number(answer.score || 0);
     section.total += Number(question.marks || 0);
+
+    if (answer.type === 'mcq') {
+      mcqStats.totalQuestions += 1;
+
+      const selected = String(answer.selectedOption || '').trim().toLowerCase();
+      const correctAnswer = String(question.correctAnswer || '').trim().toLowerCase();
+
+      if (!selected) {
+        mcqStats.unattempted += 1;
+        return;
+      }
+
+      mcqStats.attempted += 1;
+      if (selected === correctAnswer) {
+        mcqStats.correct += 1;
+      } else {
+        mcqStats.incorrect += 1;
+      }
+    }
   });
 
   const totalPossible = Object.values(breakdownMap).reduce((sum, item) => sum + item.total, 0);
@@ -122,7 +149,8 @@ const buildResultSummary = async ({ submission }) => {
       mcq: breakdownMap.mcq,
       practical: breakdownMap.practical,
       viva: breakdownMap.viva
-    }
+    },
+    mcqStats
   };
 };
 
