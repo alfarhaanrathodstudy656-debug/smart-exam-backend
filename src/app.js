@@ -14,6 +14,7 @@ const notFoundMiddleware = require('./middleware/notFound.middleware');
 const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
+app.set('trust proxy', env.trustProxy);
 
 const { apiLimiter, authLimiter, userAuthLimiter, adminAuthLimiter } = createSecurityLimiters({
   windowMinutes: env.rateLimitWindowMinutes,

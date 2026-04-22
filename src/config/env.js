@@ -9,9 +9,31 @@ required.forEach((key) => {
   }
 });
 
+const parseTrustProxy = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return process.env.NODE_ENV === 'production' ? 1 : false;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === 'true') {
+    return true;
+  }
+  if (normalized === 'false') {
+    return false;
+  }
+
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric)) {
+    return numeric;
+  }
+
+  return value;
+};
+
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 5000,
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
