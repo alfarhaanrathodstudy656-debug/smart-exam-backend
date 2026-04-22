@@ -24,6 +24,7 @@ const createSecurityLimiters = ({
     limit: apiLimit,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => String(req.path || '').startsWith('/auth'),
     message: {
       success: false,
       message: 'Too many requests. Please try again later.'
