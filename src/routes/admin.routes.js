@@ -17,6 +17,7 @@ const {
   aiGenerateQuestionSchema,
   aiReviewAnswerSchema,
   submissionsQuerySchema,
+  studentsQuerySchema,
   exportResultsSchema
 } = require('../validations/admin.validation');
 
@@ -39,6 +40,7 @@ router.patch('/tests/:testId/questions/:questionId', validate(updateQuestionSche
 router.delete('/tests/:testId/questions/:questionId', validate(questionParamSchema), adminController.deleteQuestion);
 
 router.get('/submissions', validate(submissionsQuerySchema), adminController.getSubmissions);
+router.get('/students', validate(studentsQuerySchema), adminController.getStudents);
 router.patch('/submissions/:submissionId/answers/:answerQuestionId/review', validate(reviewAnswerSchema), adminController.reviewAnswer);
 router.patch('/submissions/:submissionId/practical/:answerQuestionId/review', validate(reviewAnswerSchema), adminController.reviewAnswer);
 router.patch('/submissions/:submissionId/viva/:answerQuestionId/review', validate(reviewAnswerSchema), adminController.reviewAnswer);

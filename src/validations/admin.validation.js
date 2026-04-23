@@ -155,6 +155,16 @@ const submissionsQuerySchema = z.object({
   }).passthrough()
 });
 
+const studentsQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    search: z.string().max(120).optional()
+  }).passthrough()
+});
+
 const exportResultsSchema = z.object({
   body: z.object({}).passthrough(),
   params: z.object({}).passthrough(),
@@ -176,5 +186,6 @@ module.exports = {
   aiGenerateQuestionSchema,
   aiReviewAnswerSchema,
   submissionsQuerySchema,
+  studentsQuerySchema,
   exportResultsSchema
 };

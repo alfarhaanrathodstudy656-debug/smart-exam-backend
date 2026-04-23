@@ -105,6 +105,22 @@ const buildResultSummary = async ({ submission }) => {
     unattempted: 0
   };
 
+  const practicalStats = {
+    totalQuestions: 0,
+    attempted: 0,
+    unattempted: 0,
+    reviewed: 0,
+    pendingReview: 0
+  };
+
+  const vivaStats = {
+    totalQuestions: 0,
+    attempted: 0,
+    unattempted: 0,
+    reviewed: 0,
+    pendingReview: 0
+  };
+
   submission.answers.forEach((answer) => {
     const question = map.get(String(answer.questionId));
     if (!question) {
@@ -133,6 +149,40 @@ const buildResultSummary = async ({ submission }) => {
         mcqStats.incorrect += 1;
       }
     }
+
+    if (answer.type === 'practical') {
+      practicalStats.totalQuestions += 1;
+      const attempted = Boolean(String(answer.writtenAnswer || '').trim());
+      if (attempted) {
+        practicalStats.attempted += 1;
+      } else {
+        practicalStats.unattempted += 1;
+      }
+
+      if (answer.isReviewed) {
+        practicalStats.reviewed += 1;
+      } else {
+        practicalStats.pendingReview += 1;
+      }
+    }
+
+    if (answer.type === 'viva') {
+      vivaStats.totalQuestions += 1;
+      const attempted = Boolean(
+        String(answer.transcript || '').trim() || String(answer.audioUrl || '').trim()
+      );
+      if (attempted) {
+        vivaStats.attempted += 1;
+      } else {
+        vivaStats.unattempted += 1;
+      }
+
+      if (answer.isReviewed) {
+        vivaStats.reviewed += 1;
+      } else {
+        vivaStats.pendingReview += 1;
+      }
+    }
   });
 
   const totalPossible = Object.values(breakdownMap).reduce((sum, item) => sum + item.total, 0);
@@ -150,7 +200,9 @@ const buildResultSummary = async ({ submission }) => {
       practical: breakdownMap.practical,
       viva: breakdownMap.viva
     },
-    mcqStats
+    mcqStats,
+    practicalStats,
+    vivaStats
   };
 };
 

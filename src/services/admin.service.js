@@ -156,6 +156,34 @@ const getStudentSubmissions = async ({ query }) => {
   };
 };
 
+const listStudents = async ({ query }) => {
+  const { page, limit, skip } = getPagination(query);
+  const filters = { role: 'student' };
+
+  const search = String(query.search || '').trim();
+  if (search) {
+    filters.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const [items, total] = await Promise.all([
+    User.find(filters)
+      .select('name email createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filters)
+  ]);
+
+  return {
+    items,
+    meta: getPaginationMeta({ page, limit, total })
+  };
+};
+
 const reviewAnswer = async ({ submissionId, answerQuestionId, score, feedback = '', isReviewed = true }) => {
   const submission = await Submission.findById(submissionId);
   if (!submission) {
@@ -437,6 +465,7 @@ module.exports = {
   editQuestion,
   deleteQuestion,
   getStudentSubmissions,
+  listStudents,
   reviewAnswer,
   aiReviewAnswer,
   getTestAnalytics,

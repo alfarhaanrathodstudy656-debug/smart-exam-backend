@@ -194,6 +194,16 @@ const getSubmissions = asyncHandler(async (req, res) => {
   });
 });
 
+const getStudents = asyncHandler(async (req, res) => {
+  const result = await adminService.listStudents({ query: req.query });
+
+  return successResponse(res, {
+    message: 'Students fetched successfully',
+    data: result.items,
+    meta: result.meta
+  });
+});
+
 const reviewAnswer = asyncHandler(async (req, res) => {
   const submission = await adminService.reviewAnswer({
     submissionId: req.params.submissionId,
@@ -310,6 +320,7 @@ module.exports = {
   editQuestion,
   deleteQuestion,
   getSubmissions,
+  getStudents,
   reviewAnswer,
   aiReviewAnswer,
   exportResults,
