@@ -204,6 +204,30 @@ const getStudents = asyncHandler(async (req, res) => {
   });
 });
 
+const deleteStudent = asyncHandler(async (req, res) => {
+  const result = await adminService.deleteStudentById({
+    studentId: req.params.studentId,
+    actorId: req.user.id
+  });
+
+  await logActivity({
+    actorId: req.user.id,
+    role: req.user.role,
+    action: 'student_deleted',
+    entityType: 'User',
+    entityId: req.params.studentId,
+    metadata: {
+      studentEmail: result.studentEmail,
+      deletedSubmissions: result.deletedSubmissions
+    }
+  });
+
+  return successResponse(res, {
+    message: 'Student deleted successfully',
+    data: result
+  });
+});
+
 const reviewAnswer = asyncHandler(async (req, res) => {
   const submission = await adminService.reviewAnswer({
     submissionId: req.params.submissionId,
@@ -321,6 +345,7 @@ module.exports = {
   deleteQuestion,
   getSubmissions,
   getStudents,
+  deleteStudent,
   reviewAnswer,
   aiReviewAnswer,
   exportResults,

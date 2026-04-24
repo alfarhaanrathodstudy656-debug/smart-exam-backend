@@ -184,6 +184,26 @@ const listStudents = async ({ query }) => {
   };
 };
 
+const deleteStudentById = async ({ studentId, actorId }) => {
+  const student = await User.findOne({ _id: studentId, role: 'student' }).lean();
+  if (!student) {
+    throw new AppError('Student not found', StatusCodes.NOT_FOUND);
+  }
+
+  if (String(studentId) === String(actorId)) {
+    throw new AppError('You cannot delete your own account from this action.', StatusCodes.BAD_REQUEST);
+  }
+
+  const submissionsDeleteResult = await Submission.deleteMany({ userId: studentId });
+  await User.deleteOne({ _id: studentId });
+
+  return {
+    studentId: String(studentId),
+    studentEmail: student.email,
+    deletedSubmissions: Number(submissionsDeleteResult?.deletedCount || 0)
+  };
+};
+
 const reviewAnswer = async ({ submissionId, answerQuestionId, score, feedback = '', isReviewed = true }) => {
   const submission = await Submission.findById(submissionId);
   if (!submission) {
@@ -466,6 +486,7 @@ module.exports = {
   deleteQuestion,
   getStudentSubmissions,
   listStudents,
+  deleteStudentById,
   reviewAnswer,
   aiReviewAnswer,
   getTestAnalytics,

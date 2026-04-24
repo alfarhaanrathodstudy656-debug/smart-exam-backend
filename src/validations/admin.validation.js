@@ -165,6 +165,14 @@ const studentsQuerySchema = z.object({
   }).passthrough()
 });
 
+const studentIdParamSchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    studentId: objectId
+  }),
+  query: z.object({}).passthrough()
+});
+
 const exportResultsSchema = z.object({
   body: z.object({}).passthrough(),
   params: z.object({}).passthrough(),
@@ -187,5 +195,6 @@ module.exports = {
   aiReviewAnswerSchema,
   submissionsQuerySchema,
   studentsQuerySchema,
+  studentIdParamSchema,
   exportResultsSchema
 };
