@@ -20,9 +20,25 @@ const dropLegacySubmissionUniqueIndex = async () => {
 
 const connectDB = async () => {
   mongoose.set('strictQuery', true);
-  await mongoose.connect(env.mongoUri, {
-    autoIndex: env.nodeEnv !== 'production'
-  });
+
+  const connectWithUri = async (uri) =>
+    mongoose.connect(uri, {
+      autoIndex: env.nodeEnv !== 'production'
+    });
+
+  try {
+    await connectWithUri(env.mongoUri);
+  } catch (error) {
+    const isSrvLookupError = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEOUT'].includes(error?.code);
+    if (!isSrvLookupError || !env.mongoUriFallback) {
+      throw error;
+    }
+
+    // eslint-disable-next-line no-console
+    console.warn('Primary Mongo SRV lookup failed. Retrying with fallback URI.');
+    await connectWithUri(env.mongoUriFallback);
+  }
+
   await dropLegacySubmissionUniqueIndex();
   return mongoose.connection;
 };

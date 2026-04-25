@@ -35,6 +35,7 @@ const env = {
   port: Number(process.env.PORT) || 5000,
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   mongoUri: process.env.MONGO_URI,
+  mongoUriFallback: process.env.MONGO_URI_FALLBACK || '',
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   adminEmail: process.env.ADMIN_EMAIL || 'alfarhaanrathodstudy656@gmail.com',
